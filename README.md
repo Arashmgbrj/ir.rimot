@@ -1,233 +1,215 @@
-# 🚀 پروژه هوشمند RFID + کنترل از راه‌دست IR
+# 📱 کتابخانه IRremote برای آردوینو
 
-## 📌 معرفی پروژه
-سیستم ترکیبی **کنترل دسترسی RFID** و **کنترل IR** برای پروژه‌های امنیتی و اتوماسیون
+## 🔍 معرفی
+**IRremote** یک کتابخانه قدرتمند آردوینو برای کار با **مادون‌قرمز (Infrared)** است که امکان ارسال و دریافت سیگنال‌های IR را فراهم می‌کند. این کتابخانه برای کنترل از راه‌دست وسایل الکترونیکی، ساخت ریموت کنترل و پروژه‌های اتوماسیون خانگی ایده‌آل است.
 
-## 📦 قطعات مورد نیاز
-| قطعه | تعداد | توضیحات |
-|------|-------|---------|
-| آردوینو Uno | ۱ | پردازنده اصلی |
-| ماژول RFID-RC522 | ۱ | خواندن کارت‌های RFID |
-| گیرنده IR (VS1838B) | ۱ | دریافت سیگنال IR |
-| ریموت کنترل IR | ۱ | ارسال دستورات |
-| LED سبز، قرمز، زرد | هرکدام ۱ | نمایش وضعیت |
-| مقاومت ۲۲۰Ω | ۳ | برای LEDها |
-| برد بورد | ۱ | مونتاژ مدار |
-| سیم جامپر | ۲۰+ | اتصالات |
+## ✨ ویژگی‌ها
+- ✅ **ارسال و دریافت** سیگنال‌های IR
+- ✅ پشتیبانی از **پروتکل‌های متعدد** (NEC، Sony، RC5، RC6 و ...)
+- ✅ **تشخیص خودکار** پروتکل
+- ✅ **ضبط و پخش** سیگنال‌ها
+- ✅ **سازگاری با اکثر گیرنده‌های IR**
+- ✅ **مستندات کامل** و مثال‌های متنوع
 
-## 🔌 نحوه اتصال
-### 🔐 اتصال RFID-RC522:
+## 📦 نصب
+
+### روش ۱: از طریق Library Manager
+1. آردوینو IDE را باز کنید
+2. به مسیر بروید: **Tools → Manage Libraries...**
+3. در کادر جستجو عبارت **"IRremote"** را تایپ کنید
+4. کتابخانه **"IRremote by shirriff"** یا **"IRremoteESP8266"** را انتخاب و install کنید
+
+### روش ۲: نصب دستی
+1. آخرین نسخه را از [GitHub](https://github.com/Arduino-IRremote/Arduino-IRremote) دانلود کنید
+2. فایل زیپ را در مسیر کتابخانه‌های آردوینو اکسترکت کنید:
+   - ویندوز: `Documents/Arduino/libraries/`
+   - مک: `Documents/Arduino/libraries/`
+   - لینوکس: `~/Arduino/libraries/`
+3. آردوینو IDE را ریستارت کنید
+
+## 🔌 اتصال سخت‌افزار
+
+### گیرنده IR (برای دریافت)
 ```
-SDA  → پین 10
-SCK  → پین 13
-MOSI → پین 11
-MISO → پین 12
-RST  → پین 9
-GND  → GND
-VCC  → 3.3V
-```
-
-### 📟 اتصال گیرنده IR:
-```
+گیرنده IR (VS1838B/TSOP382) → آردوینو
 VCC → 5V
 GND → GND
-OUT → پین 2
+OUT → پین 11 (قابل تغییر)
 ```
 
-### 💡 اتصال LEDها:
+### فرستنده IR (برای ارسال)
 ```
-سبز  → پین 6 + مقاومت 220Ω
-قرمز → پین 7 + مقاومت 220Ω
-زرد  → پین 5 + مقاومت 220Ω
+فرستنده IR LED → آردوینو
+آند (طولانی‌تر) → مقاومت 100-220Ω → پین 3
+کاتد (کوتاه‌تر) → GND
 ```
 
-## 📜 کد اصلی
+## 🚀 مثال‌های کاربردی
+
+### مثال ۱: دریافت کدهای ریموت
 ```arduino
-#include <SPI.h>
-#include <MFRC522.h>
 #include <IRremote.h>
 
-#define RST_PIN 9
-#define SS_PIN 10
-#define IR_RECEIVE_PIN 2
+const int RECV_PIN = 11;
+IRrecv irrecv(RECV_PIN);
+decode_results results;
 
-#define LED_GREEN 6
-#define LED_RED 7
-#define LED_YELLOW 5
+void setup() {
+  Serial.begin(9600);
+  irrecv.enableIRIn(); // شروع دریافت
+  Serial.println("📡 آماده دریافت سیگنال IR...");
+}
 
-MFRC522 mfrc522(SS_PIN, RST_PIN);
+void loop() {
+  if (irrecv.decode(&results)) {
+    Serial.print("🔢 کد دریافت شده: 0x");
+    Serial.println(results.value, HEX);
+    Serial.print("📏 طول: ");
+    Serial.println(results.bits);
+    Serial.println("-------------------");
+    irrecv.resume(); // آماده دریافت بعدی
+  }
+}
+```
+
+### مثال ۲: ارسال کد NEC
+```arduino
+#include <IRremote.h>
+
+IRsend irsend;
+
+void setup() {
+  Serial.begin(9600);
+}
+
+void loop() {
+  // ارسال کد Power برای دستگاه‌های NEC
+  Serial.println("📤 ارسال کد Power (0x20DF10EF)...");
+  irsend.sendNEC(0x20DF10EF, 32); // آدرس و تعداد بیت‌ها
+  
+  delay(5000); // تأخیر ۵ ثانیه
+}
+```
+
+### مثال ۳: کنترل LED با ریموت
+```arduino
+#include <IRremote.h>
+
+const int RECV_PIN = 11;
+const int LED_PIN = 13;
+
+IRrecv irrecv(RECV_PIN);
+decode_results results;
 
 // کدهای دکمه‌های ریموت (با ریموت خود تست کنید)
-#define IR_BUTTON_1 0xFFA25D
-#define IR_BUTTON_2 0xFF629D
-#define IR_BUTTON_3 0xFFE21D
-
-// کارت‌های مجاز
-byte authorizedCards[][4] = {
-  {0x12, 0x34, 0x56, 0x78},  // کارت ۱
-  {0xAA, 0xBB, 0xCC, 0xDD}   // کارت ۲
-};
+#define POWER_BUTTON 0xFFA25D
+#define VOL_UP       0xFF629D
+#define VOL_DOWN     0xFFE21D
 
 void setup() {
+  pinMode(LED_PIN, OUTPUT);
   Serial.begin(9600);
-  Serial.println("🚀 سیستم RFID + IR راه‌اندازی شد");
-  
-  SPI.begin();
-  mfrc522.PCD_Init();
-  IrReceiver.begin(IR_RECEIVE_PIN);
-  
-  pinMode(LED_GREEN, OUTPUT);
-  pinMode(LED_RED, OUTPUT);
-  pinMode(LED_YELLOW, OUTPUT);
-  
-  allLEDsOff();
-  Serial.println("✅ سیستم آماده است");
+  irrecv.enableIRIn();
+  Serial.println("💡 کنترل LED با ریموت - آماده");
 }
 
 void loop() {
-  checkIRCommand();
-  checkRFID();
-  delay(100);
-}
-
-void checkIRCommand() {
-  if (IrReceiver.decode()) {
-    uint32_t command = IrReceiver.decodedIRData.decodedRawData;
+  if (irrecv.decode(&results)) {
+    Serial.print("کد: 0x");
+    Serial.println(results.value, HEX);
     
-    Serial.print("📟 دستور IR دریافت شد: 0x");
-    Serial.println(command, HEX);
-    
-    switch(command) {
-      case IR_BUTTON_1:
-        digitalWrite(LED_GREEN, HIGH);
-        digitalWrite(LED_RED, LOW);
-        digitalWrite(LED_YELLOW, LOW);
-        Serial.println("💚 LED سبز روشن");
+    switch(results.value) {
+      case POWER_BUTTON:
+        digitalWrite(LED_PIN, !digitalRead(LED_PIN));
+        Serial.println("🔘 دکمه پاور - تغییر وضعیت LED");
         break;
-        
-      case IR_BUTTON_2:
-        digitalWrite(LED_GREEN, LOW);
-        digitalWrite(LED_RED, HIGH);
-        digitalWrite(LED_YELLOW, LOW);
-        Serial.println("❤️ LED قرمز روشن");
+      case VOL_UP:
+        digitalWrite(LED_PIN, HIGH);
+        Serial.println("🔺 دکمه افزایش صدا - LED روشن");
         break;
-        
-      case IR_BUTTON_3:
-        digitalWrite(LED_GREEN, LOW);
-        digitalWrite(LED_RED, LOW);
-        digitalWrite(LED_YELLOW, HIGH);
-        Serial.println("💛 LED زرد روشن");
+      case VOL_DOWN:
+        digitalWrite(LED_PIN, LOW);
+        Serial.println("🔻 دکمه کاهش صدا - LED خاموش");
         break;
-        
-      default:
-        Serial.println("⚠️ دستور ناشناخته");
-        blinkAllLEDs();
     }
-    IrReceiver.resume();
+    irrecv.resume();
   }
-}
-
-void checkRFID() {
-  if (!mfrc522.PICC_IsNewCardPresent()) return;
-  if (!mfrc522.PICC_ReadCardSerial()) return;
-  
-  Serial.print("🔑 UID کارت: ");
-  for (byte i = 0; i < mfrc522.uid.size; i++) {
-    Serial.print(mfrc522.uid.uidByte[i] < 0x10 ? " 0" : " ");
-    Serial.print(mfrc522.uid.uidByte[i], HEX);
-  }
-  Serial.println();
-  
-  bool isAuthorized = false;
-  for(int i = 0; i < sizeof(authorizedCards)/sizeof(authorizedCards[0]); i++) {
-    if(memcmp(mfrc522.uid.uidByte, authorizedCards[i], 4) == 0) {
-      isAuthorized = true;
-      break;
-    }
-  }
-  
-  if(isAuthorized) {
-    Serial.println("✅ دسترسی مجاز!");
-    grantAccess();
-  } else {
-    Serial.println("❌ دسترسی رد شد!");
-    denyAccess();
-  }
-  
-  mfrc522.PICC_HaltA();
-}
-
-void grantAccess() {
-  digitalWrite(LED_GREEN, HIGH);
-  digitalWrite(LED_RED, LOW);
-  delay(2000);
-  digitalWrite(LED_GREEN, LOW);
-}
-
-void denyAccess() {
-  digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_RED, HIGH);
-  delay(2000);
-  digitalWrite(LED_RED, LOW);
-}
-
-void blinkAllLEDs() {
-  for(int i=0; i<3; i++) {
-    digitalWrite(LED_GREEN, HIGH);
-    digitalWrite(LED_RED, HIGH);
-    digitalWrite(LED_YELLOW, HIGH);
-    delay(200);
-    digitalWrite(LED_GREEN, LOW);
-    digitalWrite(LED_RED, LOW);
-    digitalWrite(LED_YELLOW, LOW);
-    delay(200);
-  }
-}
-
-void allLEDsOff() {
-  digitalWrite(LED_GREEN, LOW);
-  digitalWrite(LED_RED, LOW);
-  digitalWrite(LED_YELLOW, LOW);
 }
 ```
 
-## 🚀 راه‌اندازی سریع
-1. **اتصالات** را مطابق جدول انجام دهید
-2. **کتابخانه‌ها** را نصب کنید:
-   - `MFRC522` برای RFID
-   - `IRremote` برای کنترل IR
-3. **کد** را در آردوینو IDE بارگذاری کنید
-4. **کدهای ریموت** خود را پیدا کنید (مقادیر IR_BUTTON_1,2,3 را تغییر دهید)
+## 📋 پروتکل‌های پشتیبانی شده
+| پروتکل | توضیح | کاربرد رایج |
+|--------|-------|-------------|
+| **NEC** | رایج‌ترین پروتکل | اکثر وسایل خانگی |
+| **Sony** | پروتکل سونی | دوربین‌ها، پخش‌کننده‌ها |
+| **RC5** | پروتکل فیلیپس | سیستم‌های صوتی |
+| **RC6** | نسخه پیشرفته RC5 | وسایل فیلیپس |
+| **Samsung** | پروتکل سامسونگ | تلویزیون‌ها |
+| **JVC** | پروتکل JVC | وسایل ویدئویی |
+| **LG** | پروتکل الجی | تلویزیون‌های LG |
 
-## 🛠️ کد کمکی برای پیدا کردن کدهای ریموت
+## 🔧 تنظیمات پیشرفته
+
+### تغییر پین‌های پیش‌فرض
 ```arduino
-void setup() {
-  Serial.begin(9600);
-  IrReceiver.begin(IR_RECEIVE_PIN);
-  Serial.println("🔍 برای پیدا کردن کدهای ریموت، دکمه‌ها را فشار دهید");
-}
+// برای آردوینو Uno، Mega، Leonardo
+#define IR_RECEIVE_PIN 2  // پین دریافت
+#define IR_SEND_PIN 3     // پین ارسال
+#define LED_PIN 13        // پین LED داخلی
 
-void loop() {
-  if (IrReceiver.decode()) {
-    Serial.print("🆔 کد دریافتی: 0x");
-    Serial.println(IrReceiver.decodedIRData.decodedRawData, HEX);
-    IrReceiver.resume();
-  }
+// مقداردهی با پین‌های دلخواه
+IRrecv irrecv(IR_RECEIVE_PIN);
+IRsend irsend(IR_SEND_PIN);
+```
+
+### دریافت کدهای ریموت ناشناخته
+```arduino
+void dumpIRInfo(decode_results *results) {
+  Serial.println("📊 اطلاعات کامل سیگنال IR:");
+  Serial.print("  نوع پروتکل: ");
+  Serial.println(results->decode_type);
+  Serial.print("  کد: 0x");
+  Serial.println(results->value, HEX);
+  Serial.print("  تعداد بیت‌ها: ");
+  Serial.println(results->bits);
+  Serial.print("  آدرس: 0x");
+  Serial.println(results->address, HEX);
+  Serial.print("  دستور: 0x");
+  Serial.println(results->command, HEX);
 }
 ```
+
+## 🚨 عیب‌یابی
+
+| مشکل | راه حل |
+|------|--------|
+| **کدها دریافت نمی‌شود** | فاصله ریموت را کم کنید، گیرنده را تست کنید |
+| **کدهای نادرست** | از ریموت اصلی دستگاه استفاده کنید |
+| **برد کم** | از فرستنده قوی‌تر یا LED اضافه استفاده کنید |
+| **تداخل امواج** | از نور مستقیم خورشید دوری کنید |
+| **مصرف برق زیاد** | مقاومت سری با فرستنده افزایش دهید |
+
+## 🎯 پروژه‌های پیشنهادی
+1. **ریموت کنترل جهانی** - کنترل چند دستگاه با یک آردوینو
+2. **کنترل از طریق موبایل** - ارسال IR با دستورات بلوتوث/WiFi
+3. **تایمر خودکار** - خاموش کردن خودکار وسایل
+4. **شبیه‌ساز ریموت** - ذخیره و اجرای دستورات
+5. **سیستم امنیتی** - تشخیص حرکت با سنسور IR
+
+## 📚 منابع بیشتر
+- 📖 [مستندات رسمی](https://github.com/Arduino-IRremote/Arduino-IRremote)
+- 🎥 [آموزش ویدیویی](https://www.youtube.com/results?search_query=arduino+irremote)
+- 💾 [مثال‌های بیشتر](https://github.com/Arduino-IRremote/Arduino-IRremote/tree/master/examples)
 
 ## ⚠️ نکات مهم
-- ولتاژ ماژول RFID باید **۳.۳V** باشد (نه ۵V)
-- کدهای IR بسته به ریموت متفاوت است
-- برای ذخیره کارت‌های بیشتر از EEPROM استفاده کنید
-- در صورت نیاز به برد بیشتر، از آنتن خارجی استفاده کنید
-
-## 📞 پشتیبانی
-برای سوالات و مشکلات:
-1. اتصالات را بررسی کنید
-2. سریال مانیتور را بررسی کنید
-3. کدهای ریموت را تست کنید
+1. فاصله گیرنده IR از منابع نور مستقیم باشد
+2. برای برد بیشتر، فرستنده IR را به صورت موازی قرار دهید
+3. کدهای ریموت بسته به برند متفاوت هستند
+4. برخی دستگاه‌ها از پروتکل‌های اختصاصی استفاده می‌کنند
 
 ---
-**📅 آخرین بروزرسانی:** ۱۴۰۳/۰۲/۲۱  
-**🔄 نسخه:** ۲.۰.۰
+**🔄 نگارش:** 3.6.1  
+**📅 آخرین بروزرسانی:** ۱۴۰۳/۰۲/۲۲  
+**👨‍💻 توسعه‌دهنده:** Ken Shirriff و جامعه آردوینو
+
+با این کتابخانه می‌توانید به راحتی پروژه‌های مبتنی بر مادون‌قرمز ایجاد کنید! 🚀
